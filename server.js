@@ -181,7 +181,7 @@ async function autoSellPlayer() {
 
         await Player.findByIdAndUpdate(auctionState.activePlayerId._id, {
             status: 'Sold',
-            soldTo: `${teamName} (${price}L)`
+            soldTo: `${teamName} (${price}M)`
         });
         await Team.findOneAndUpdate({ name: teamName }, { $inc: { budget: -price } });
 
@@ -383,7 +383,7 @@ socket.on('getAuthorizedUsers', async () => {
         try {
             await Team.findOneAndUpdate({ name: teamName }, { $inc: { budget: Number(amount) } });
             io.emit('updateTeams', await Team.find());
-            io.emit('newMessage', { sender: "SYSTEM", role: "admin", text: `✨ ${teamName} purse adjusted by ${amount}L!` });
+            io.emit('newMessage', { sender: "SYSTEM", role: "admin", text: `✨ ${teamName} purse adjusted by ${amount}M!` });
         } catch (err) { console.error(err); }
     });
     // --- FORCE PURSE DEDUCTION (ADMIN ONLY) ---
@@ -405,7 +405,7 @@ socket.on('deductPurse', async ({ teamName, amount }) => {
         io.emit('newMessage', { 
             sender: "SYSTEM", 
             role: "admin", 
-            text: `⚠️ PENALTY: ${teamName} purse has been forcefully reduced by ${Math.abs(amount)}L!` 
+            text: `⚠️ PENALTY: ${teamName} purse has been forcefully reduced by ${Math.abs(amount)}M!` 
         });
     } catch (err) {
         console.error(err);
@@ -427,7 +427,7 @@ socket.on('createNewTeam', async ({ name, budget }) => {
         const allTeams = await Team.find();
         io.emit('updateTeams', allTeams);
         
-        socket.emit('newMessage', { sender: "SYSTEM", text: `✅ Team [${name}] created with ${budget}L budget.` });
+        socket.emit('newMessage', { sender: "SYSTEM", text: `✅ Team [${name}] created with ${budget}M budget.` });
     } catch (err) {
         socket.emit('errorMsg', "Team already exists or error occurred.");
     }
