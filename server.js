@@ -271,13 +271,7 @@ socket.on('createNewTeam', async ({ name, budget }) => {
     }
 });
 
-        // Refresh admin list
-        const users = await User.find({ role: { $ne: 'visitor' } }).select('-password -otp');
-        io.emit('authorizedUsersList', users);
-        io.emit('updateTeams', await Team.find());
-        socket.emit('newMessage', { sender: "SYSTEM", text: `✅ User ${data.email} created successfully!` });
-    } catch (err) { socket.emit('errorMsg', "User already exists or error occurred."); }
-});
+    
     socket.on('deleteAuthorizedUser', async (id) => {
     await User.findByIdAndDelete(id);
     const users = await User.find({ role: { $ne: 'visitor' } }).select('-password -otp');
