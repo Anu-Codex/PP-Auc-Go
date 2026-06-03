@@ -412,6 +412,40 @@ socket.on('deductPurse', async ({ teamName, amount }) => {
         socket.emit('errorMsg', "Force deduction failed.");
     }
 });
+    // --- ADMIN TEAM/FRANCHISE MANAGEMENT ---
+
+// 1. Create a New Team
+socket.on('createNewTeam', async ({ name, budget }) => {
+    try {
+        const newTeam = new Team({ 
+            name: name.trim(), 
+            budget: Number(budget) 
+        });
+        await newTeam.save();
+        
+        // Broadcast updated list to all users
+        const allTeams = await Team.find();
+        io.emit('updateTeams', allTeams);
+        
+        socket.emit('newMessage', { sender: "SYSTEM", text: `✅ Team [${name}] created with ${budget}L budget.` });
+    } catch (err) {
+        socket.emit('errorMsg', "Team already exists or error occurred.");
+    }
+});
+
+// 2. Delete a Team
+socket.on('deleteTeam', async (id) => {
+    try {
+        await Team.findByIdAndDelete(id);
+        
+        const allTeams = await Team.find();
+        io.emit('updateTeams', allTeams);
+        
+        socket.emit('newMessage', { sender: "SYSTEM", text: "❌ Team removed from the database." });
+    } catch (err) {
+        socket.emit('errorMsg', "Failed to delete team.");
+    }
+});
 
     socket.on('sendMessage', async (data) => {
         // Simple security check: Only allow chat if user is verified (optional)
