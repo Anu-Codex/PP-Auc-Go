@@ -50,21 +50,7 @@ const Team = mongoose.model('Team', teamSchema);
 const Chat = mongoose.model('Chat', chatSchema);
 
 // --- HARDCODED CREDENTIALS (As requested) ---
-const ADMINS = [
-    { email: "sarkaranubhav48@gmail.com", name: "Nexus Admin", pass: "admin123" }
-];
 
-const CAPTAINS = [
-    { email: "riturajjj10@gmail.com", name: "Storm Hunters", pass: "roni123" },
-    { email: "asheshchatterjee.2016@gmail.com", name: "UNDERDOG FC", pass: "ashesh123" },
-    { email: "anishdgp0104@gmail.com", name: "FlameBorn Kings", pass: "anish123" },
-    { email: "sunnyghoshdastidar506@gmail.com", name: "Wrath Of Wings", pass: "piyush123" },
-    { email: "kunduarnab7439@gmail.com", name: "PANDAVA", pass: "arnab123" },
-    { email: "pariasaikat94@gmail.com", name: "Destroyers", pass: "saikat123" },
-    { email: "cjoy7970@gmail.com", name: "Madrid Warriors", pass: "joy123" },
-    { email: "sammondal888@gmail.com", name: "Black Panthers FC", pass: "sam123" }
-    
-];
 
 // --- AUTH UTILITIES ---
 async function sendOTPEmail(email, otp) {
@@ -79,16 +65,7 @@ async function sendOTPEmail(email, otp) {
 // --- AUTOMATIC TEAM SEEDING ---
 
 
-async function seedTeams() {
-    for (let t of teamList) {
-        const exists = await Team.findOne({ name: t.name });
-        if (!exists) {
-            await new Team(t).save();
-            console.log(`🌱 Seeded team: ${t.name}`);
-        }
-    }
-}
-seedTeams();
+
 // Add this temporary seeding logic at the bottom of server.js
 async function createMasterAdmin() {
     const exists = await User.findOne({ email: "sarkaranubhav48@gmail.com" });
