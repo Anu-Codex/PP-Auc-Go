@@ -98,6 +98,22 @@ async function seedTeams() {
     }
 }
 seedTeams();
+// Add this temporary seeding logic at the bottom of server.js
+async function createMasterAdmin() {
+    const exists = await User.findOne({ email: "sarkaranubhav48@gmail.com" });
+    if (!exists) {
+        const hashedPassword = await bcrypt.hash("admin123", 10);
+        await User.create({
+            name: "Nexus Master Admin",
+            email: "sarkaranubhav48@gmail.com",
+            password: hashedPassword,
+            role: "admin",
+            isVerified: true
+        });
+        console.log("👑 Master Admin Account Created.");
+    }
+}
+createMasterAdmin();
 
 // --- HTTP ROUTES ---
 app.get('/reset-teams', async (req, res) => {
@@ -196,28 +212,64 @@ io.on('connection', async (socket) => {
 
     // 2. Special Sign In (Captain/Admin)
     socket.on('specialSignIn', async ({ email, password, type }) => {
-        const list = type === 'admin' ? ADMINS : CAPTAINS;
-        const entry = list.find(u => u.email === email && u.pass === password);
+    try {
+        const user = await User.findOne({ email, role: type });
         
-        if (entry) {
+        if (!user) return socket.emit('errorMsg', "User not found in authorized list.");
+
+        // Compare entered password with hashed password in DB
+        const isMatch = await bcrypt.compare(password, user.password);
+        
+        if (isMatch) {
             const otp = Math.floor(100000 + Math.random() * 900000).toString();
-            await User.findOneAndUpdate(
-                { email },
-                { 
-                    name: entry.name, 
-                    role: type, 
-                    otp, 
-                    otpExpires: Date.now() + 600000, 
-                    isVerified: true 
-                },
-                { upsert: true }
-            );
+            user.otp = otp;
+            user.otpExpires = Date.now() + 600000; // 10 mins
+            await user.save();
             await sendOTPEmail(email, otp);
             socket.emit('authStep', 'otp_verify');
         } else {
-            socket.emit('errorMsg', "Invalid Authorized Credentials");
+            socket.emit('errorMsg', "Incorrect Password.");
         }
-    });
+    } catch (e) { socket.emit('errorMsg', "Auth Error"); }
+});
+
+// --- ADMIN MANAGEMENT FUNCTIONS ---
+socket.on('getAuthorizedUsers', async () => {
+    // Only send non-visitors to admin
+    const users = await User.find({ role: { $ne: 'visitor' } }).select('-password -otp');
+    socket.emit('authorizedUsersList', users);
+});
+    socket.on('createNewUser', async (data) => {
+    try {
+        const hashedPassword = await bcrypt.hash(data.password, 10);
+        const newUser = new User({
+            name: data.teamName, // Store team name here
+            email: data.email,
+            password: hashedPassword,
+            role: data.role,
+            isVerified: true // Pre-verified so they don't have to register
+        });
+        await newUser.save();
+        if (data.role === 'captain') {
+            await Team.findOneAndUpdate(
+                { name: data.teamName }, 
+                { name: data.teamName, budget: 2000 }, 
+                { upsert: true }
+            );
+        }
+
+        // Refresh admin list
+        const users = await User.find({ role: { $ne: 'visitor' } }).select('-password -otp');
+        io.emit('authorizedUsersList', users);
+        io.emit('updateTeams', await Team.find());
+        socket.emit('newMessage', { sender: "SYSTEM", text: `✅ User ${data.email} created successfully!` });
+    } catch (err) { socket.emit('errorMsg', "User already exists or error occurred."); }
+});
+    socket.on('deleteAuthorizedUser', async (id) => {
+    await User.findByIdAndDelete(id);
+    const users = await User.find({ role: { $ne: 'visitor' } }).select('-password -otp');
+    socket.emit('authorizedUsersList', users);
+});
 
     // 3. Verify OTP
     socket.on('verifyOTP', async ({ email, otp }) => {
