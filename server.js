@@ -448,10 +448,18 @@ socket.on('deleteTeam', async (id) => {
 });
 
     socket.on('sendMessage', async (data) => {
-        // Simple security check: Only allow chat if user is verified (optional)
+    // BLOCK GUESTS FROM SENDING
+    if (data.role === 'guest') {
+        return socket.emit('errorMsg', "Guests are not allowed to chat.");
+    }
+
+    try {
         await new Chat(data).save();
         io.emit('newMessage', data);
-    });
+    } catch (err) {
+        console.error("Chat Error:", err);
+    }
+});
 
     socket.on('deletePlayer', async (playerId) => {
         await Player.findByIdAndDelete(playerId);
