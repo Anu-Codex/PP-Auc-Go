@@ -478,8 +478,5 @@ socket.on('updatePlayerImage', async ({ playerId, imageUrl }) => {
     }
 });
 });
-socket.on('disconnect', () => {
-    socket.removeAllListeners();
-});
 
 server.listen(process.env.PORT || 3000, () => console.log("Server Running"));
