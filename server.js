@@ -210,21 +210,46 @@ socket.on('getAuthorizedUsers', async () => {
     socket.on('createNewUser', async (data) => {
     try {
         const hashedPassword = await bcrypt.hash(data.password, 10);
-        const newUser = new User({
-            name: data.teamName, // Store team name here
-            email: data.email,
-            password: hashedPassword,
-            role: data.role,
-            isVerified: true // Pre-verified so they don't have to register
-        });
-        await newUser.save();
+        const userEmail = data.email.trim().toLowerCase();
+        const teamName = data.teamName.trim();
+        const customBudget = Number(data.budget); // GET VARIABLE BUDGET
+
+        // 1. Create/Update the User
+        await User.findOneAndUpdate(
+            { email: userEmail },
+            {
+                name: teamName, 
+                email: userEmail,
+                password: hashedPassword,
+                role: data.role,
+                isVerified: true
+            },
+            { upsert: true }
+        );
+
+        // 2. Link to Franchise with Variable Budget
         if (data.role === 'captain') {
             await Team.findOneAndUpdate(
-                { name: data.teamName }, 
-                { name: data.teamName, budget: 2000 }, 
+                { name: teamName },
+                { 
+                    name: teamName, 
+                    budget: customBudget // APPLY THE VARIABLE BUDGET HERE
+                },
                 { upsert: true }
             );
         }
+
+        // Refresh UI
+        const users = await User.find({ role: { $ne: 'visitor' } }).select('-password -otp');
+        const teams = await Team.find();
+        io.emit('authorizedUsersList', users);
+        io.emit('updateTeams', teams);
+        socket.emit('newMessage', { sender: "SYSTEM", text: `✅ Captain ${userEmail} linked to ${teamName} with ${customBudget}L` });
+
+    } catch (err) {
+        socket.emit('errorMsg', "Failed to create user.");
+    }
+});
 
         // Refresh admin list
         const users = await User.find({ role: { $ne: 'visitor' } }).select('-password -otp');
