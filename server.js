@@ -69,24 +69,15 @@ const CAPTAINS = [
 // --- AUTH UTILITIES ---
 async function sendOTPEmail(email, otp) {
     const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
-    sendSmtpEmail.subject = "Nexus Legends Verification Code";
+    sendSmtpEmail.subject = "PES PARK Verification Code";
     sendSmtpEmail.htmlContent = `<html><body><h1>Your OTP: ${otp}</h1><p>Use this code to verify your account.</p></body></html>`;
-    sendSmtpEmail.sender = { "name": "Nexus Legends", "email": process.env.BREVO_SENDER_EMAIL };
+    sendSmtpEmail.sender = { "name": "PES PARK", "email": process.env.BREVO_SENDER_EMAIL };
     sendSmtpEmail.to = [{ "email": email }];
     return apiInstance.sendTransacEmail(sendSmtpEmail);
 }
 
 // --- AUTOMATIC TEAM SEEDING ---
-const teamList = [
-    { name: "Storm Hunters", budget: 2000 },
-    { name: "UNDERDOG FC", budget: 2000 },
-    { name: "FlameBorn Kings", budget: 2000 },
-    { name: "Wrath Of Wings", budget: 2000 },
-    { name: "PANDAVA", budget: 2000 },
-    { name: "Destroyers", budget: 2000 },
-    { name: "Madrid Warriors", budget: 2000 },
-    { name: "Black Panthers FC", budget: 2000 }
-];
+
 
 async function seedTeams() {
     for (let t of teamList) {
