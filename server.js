@@ -207,14 +207,15 @@ socket.on('getAuthorizedUsers', async () => {
     const users = await User.find({ role: { $ne: 'visitor' } }).select('-password -otp');
     socket.emit('authorizedUsersList', users);
 });
-    socket.on('createNewUser', async (data) => {
+    // --- 1. LINKED USER CREATION (WITH VARIABLE BUDGET) ---
+socket.on('createNewUser', async (data) => {
     try {
         const hashedPassword = await bcrypt.hash(data.password, 10);
         const userEmail = data.email.trim().toLowerCase();
         const teamName = data.teamName.trim();
-        const customBudget = Number(data.budget); // GET VARIABLE BUDGET
+        const customBudget = Number(data.budget) || 2000; // Use input or default to 2000
 
-        // 1. Create/Update the User
+        // Create/Update the User in DB
         await User.findOneAndUpdate(
             { email: userEmail },
             {
@@ -227,27 +228,46 @@ socket.on('getAuthorizedUsers', async () => {
             { upsert: true }
         );
 
-        // 2. Link to Franchise with Variable Budget
+        // Link to Franchise if role is captain
         if (data.role === 'captain') {
             await Team.findOneAndUpdate(
                 { name: teamName },
-                { 
-                    name: teamName, 
-                    budget: customBudget // APPLY THE VARIABLE BUDGET HERE
-                },
+                { name: teamName, budget: customBudget },
                 { upsert: true }
             );
         }
 
-        // Refresh UI
+        // Send updated data to Admin
         const users = await User.find({ role: { $ne: 'visitor' } }).select('-password -otp');
         const teams = await Team.find();
         io.emit('authorizedUsersList', users);
         io.emit('updateTeams', teams);
-        socket.emit('newMessage', { sender: "SYSTEM", text: `✅ Captain ${userEmail} linked to ${teamName} with ${customBudget}L` });
+        socket.emit('newMessage', { sender: "SYSTEM", text: `✅ User ${userEmail} linked to ${teamName} with ${customBudget}M.` });
 
     } catch (err) {
-        socket.emit('errorMsg', "Failed to create user.");
+        console.error("User Creation Error:", err);
+        socket.emit('errorMsg', "Failed to create user. Check if email is unique.");
+    }
+});
+
+// --- 2. FRANCHISE CREATION / BUDGET UPDATE ---
+socket.on('createNewTeam', async ({ name, budget }) => {
+    try {
+        const teamName = name.trim();
+        const teamBudget = Number(budget);
+
+        await Team.findOneAndUpdate(
+            { name: teamName },
+            { name: teamName, budget: teamBudget },
+            { upsert: true }
+        );
+
+        const allTeams = await Team.find();
+        io.emit('updateTeams', allTeams);
+        socket.emit('newMessage', { sender: "SYSTEM", text: `✅ Franchise [${teamName}] updated to ${teamBudget}M.` });
+    } catch (err) {
+        console.error("Franchise Error:", err);
+        socket.emit('errorMsg', "Error managing franchise.");
     }
 });
 
