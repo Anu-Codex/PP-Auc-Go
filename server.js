@@ -105,7 +105,7 @@ async function sendOTPEmail(email, otp) {
     
     sendSmtpEmail.htmlContent = `
         <div style="font-family: Arial, sans-serif; background-color: #0a0f16; color: #ffffff; padding: 40px; text-align: center; border-radius: 20px;">
-            <h1 style="color: #00e5ff; margin-bottom: 10px;">NEXUS LEGENDS</h1>
+            <h1 style="color: #00e5ff; margin-bottom: 10px;">PES PARK</h1>
             <p style="color: #64748b; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">Identity Verification</p>
             <hr style="border: 0; border-top: 1px solid #1e293b; margin: 20px 0;">
             <p style="font-size: 16px;">Use the following code to access the Auction Arena:</p>
@@ -116,7 +116,7 @@ async function sendOTPEmail(email, otp) {
         </div>
     `;
     
-    sendSmtpEmail.sender = { "name": "NEXUS LEGENDS ARENA", "email": process.env.BREVO_SENDER_EMAIL };
+    sendSmtpEmail.sender = { "name": "PES PARK ARENA", "email": process.env.BREVO_SENDER_EMAIL };
     sendSmtpEmail.to = [{ "email": email }];
     return apiInstance.sendTransacEmail(sendSmtpEmail);
 }
@@ -339,6 +339,12 @@ async function broadcastStats() {
         console.error("Stats Error:", err);
     }
 }
+const musicSchema = new mongoose.Schema({
+    url: String,
+    addedBy: String,
+    timestamp: { type: Date, default: Date.now }
+});
+const Music = mongoose.model('Music', musicSchema);
 // --- NEXUS DATA SYNC API ---
 const DATA_SYNC_KEY = "NEXUS_SECRET_789"; // Change this to any secret word
 
@@ -396,16 +402,17 @@ app.get('/api/export-results', async (req, res) => {
 io.on('connection', async (socket) => {
     
     // All stats and initial data fetching goes here
-    const [players, teams, chats, stats, history] = await Promise.all([
+    const [players, teams, chats, stats, history, customMusic] = await Promise.all([
         Player.find(),
         Team.find(),
         Chat.find().sort({ timestamp: 1 }).limit(50),
         getStatsObject(),
-        History.find().sort({ timestamp: 1 }).limit(70)
+        History.find().sort({ timestamp: 1 }).limit(70),
+        Music.find()
     ]);
 
     socket.emit('initialData', {
-        players, teams, chats, state: auctionState, stats, history
+        players, teams, chats, state: auctionState, stats, history, customMusic: customMusic.map(m => m.url)
     });
 
     // --- NEW: AUTHENTICATION EVENTS ---
@@ -460,6 +467,18 @@ socket.on('getAuthorizedUsers', async () => {
     // Only send non-visitors to admin
     const users = await User.find({ role: { $ne: 'visitor' } }).select('-password -otp');
     socket.emit('authorizedUsersList', users);
+});
+    socket.on('addMusicTrack', async (url) => {
+    try {
+        if (!url.startsWith('http')) return socket.emit('errorMsg', "Invalid URL");
+        
+        const newTrack = new Music({ url: url.trim() });
+        await newTrack.save();
+        
+        // Broadcast the new track to everyone's playlist immediately
+        io.emit('newTrackAdded', url.trim());
+        io.emit('newMessage', { sender: "RADIO", role: "admin", text: "🎵 New track added to the Nexus Radio rotation!" });
+    } catch (err) { console.error(err); }
 });
     // --- 1. LINKED USER CREATION (WITH VARIABLE BUDGET) ---
 socket.on('createNewUser', async (data) => {
