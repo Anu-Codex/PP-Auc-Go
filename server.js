@@ -608,35 +608,35 @@ io.on('connection', async (socket) => {
     io.emit('updateTeams', await Team.find());
 });
     // --- ADD MUSIC TRACK & SAVE TO DB ---
-socket.on('addMusicTrack', async (url) => {
-    try {
-        if (!url || !url.startsWith('http')) {
-            return socket.emit('errorMsg', "Invalid audio URL.");
-        }
-        
-        // 1. Save to MongoDB Database
-        const newTrack = new Music({ 
-            url: url.trim(),
-            addedBy: socket.id 
-        });
-        await newTrack.save();
-        
-        // 2. Broadcast the new track URL to all connected clients instantly
-        io.emit('newTrackAdded', url.trim());
-        
-        // 3. Optional system notification in chat
-        io.emit('newMessage', { 
-            sender: "RADIO", 
-            role: "admin", 
-            text: "🎵 New track added to the Nexus Radio rotation!" 
-        });
+    socket.on('addMusicTrack', async (url) => {
+        try {
+            if (!url || !url.startsWith('http')) {
+                return socket.emit('errorMsg', "Invalid audio URL.");
+            }
+            
+            // 1. Save to MongoDB Database
+            const newTrack = new Music({ 
+                url: url.trim(),
+                addedBy: socket.id 
+            });
+            await newTrack.save();
+            
+            // 2. Broadcast the new track URL to all connected clients instantly
+            io.emit('newTrackAdded', url.trim());
+            
+            // 3. Optional chat confirmation
+            io.emit('newMessage', { 
+                sender: "RADIO", 
+                role: "admin", 
+                text: "🎵 New track added to the Nexus Radio rotation!" 
+            });
 
-        console.log("🎵 New track saved to DB and broadcasted:", url.trim());
-    } catch (err) { 
-        console.error("Music Add Error:", err);
-        socket.emit('errorMsg', "Failed to save track to database.");
-    }
-});
+            console.log("🎵 New track saved to DB and broadcasted:", url.trim());
+        } catch (err) { 
+            console.error("Music Add Error:", err);
+            socket.emit('errorMsg', "Failed to save track to database.");
+        }
+    });
 
     // Slideshow Showcase
     socket.on('toggleSlideshow', async (shouldStart) => {
