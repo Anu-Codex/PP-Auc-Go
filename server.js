@@ -658,5 +658,23 @@ io.on('connection', async (socket) => {
         }
     });
 });
+socket.on('deletePlayer', async (playerId) => {
+        try {
+            await Player.findByIdAndDelete(playerId);
+            await broadcastStats();
+            
+            // Refresh the roster for all connected clients
+            io.emit('updatePlayers', await Player.find());
+            
+            socket.emit('newMessage', { 
+                sender: "SYSTEM", 
+                role: "admin", 
+                text: `❌ Player successfully deleted from the roster.` 
+            });
+        } catch (err) {
+            console.error("Delete Player Error:", err);
+            socket.emit('errorMsg', "Failed to delete player.");
+        }
+    });
 
 server.listen(process.env.PORT || 3000, () => console.log("🚀 Server running with 100% restored features"));
