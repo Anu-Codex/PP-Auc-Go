@@ -676,5 +676,26 @@ socket.on('deletePlayer', async (playerId) => {
             socket.emit('errorMsg', "Failed to delete player.");
         }
     });
+// --- CLEAR ALL CUSTOM MUSIC TRACKS ---
+    socket.on('clearAllMusicTracks', async () => {
+        try {
+            // Only allow admin to clear tracks
+            await Music.deleteMany({});
+            
+            // Broadcast reset event to all connected users
+            io.emit('musicClearedSuccess', "All custom radio tracks have been wiped from the database.");
+            
+            io.emit('newMessage', { 
+                sender: "RADIO", 
+                role: "admin", 
+                text: "🗑️ RADIO: Admin cleared all custom music tracks. Resetting to default playlist." 
+            });
+            
+            console.log("🗑️ All custom music tracks deleted by admin.");
+        } catch (err) {
+            console.error("Clear Music Error:", err);
+            socket.emit('errorMsg', "Failed to clear music tracks.");
+        }
+    });
 
 server.listen(process.env.PORT || 3000, () => console.log("🚀 Server running with 100% restored features"));
